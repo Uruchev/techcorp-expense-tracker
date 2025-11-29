@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
-// Placeholder URL за n8n webhook - трябва да се замени
-const N8N_WEBHOOK_URL = "https://REPLACE_ME_WITH_N8N_WEBHOOK_URL";
+// n8n Webhook URL за обработка на разходи
+const N8N_WEBHOOK_URL = "https://n8n.simeontsvetanovn8nworkflows.site/webhook/expense-submit";
 
 // Типове
 interface Employee {
