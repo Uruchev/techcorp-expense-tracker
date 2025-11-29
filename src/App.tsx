@@ -63,6 +63,20 @@ function App() {
     }
   }, []);
 
+  // Автоматично запазване при промяна на employee данните (с debounce)
+  useEffect(() => {
+    if (employee.fullName.trim() && employee.employeeId.trim()) {
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('techcorp_employee', JSON.stringify({
+          fullName: employee.fullName.trim(),
+          employeeId: employee.employeeId.trim()
+        }));
+        setIsEmployeeSaved(true);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [employee.fullName, employee.employeeId]);
+
   // Функция за зареждане на история от Supabase
   const fetchExpenseHistory = useCallback(async () => {
     if (!isEmployeeSaved || !employee.fullName || !employee.employeeId) {

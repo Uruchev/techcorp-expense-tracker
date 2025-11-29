@@ -1,0 +1,379 @@
+{
+  "name": "TechCorp Expense Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "expense-submit",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1b2c3d4-1111-1111-1111-111111111111",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "expense-submit"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM users WHERE employee_id = '{{ $json.body.employee_id }}' AND full_name = '{{ $json.body.full_name }}' LIMIT 1",
+        "options": {}
+      },
+      "id": "a1b2c3d4-2222-2222-2222-222222222222",
+      "name": "Validate Employee",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-3333-3333-3333-333333333333",
+      "name": "Employee Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"Error\", \"reason\": \"Невалиден служител. Моля, проверете името и служебния номер.\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1b2c3d4-4444-4444-4444-444444444444",
+      "name": "Invalid Employee Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Jailbreak detection patterns\nconst jailbreakPatterns = [\n  /ignore\\s*(all)?\\s*(previous|prior|above)/i,\n  /forget\\s*(your|all)?\\s*(instructions|rules)/i,\n  /you\\s*are\\s*now/i,\n  /pretend\\s*(to\\s*be|you\\s*are)/i,\n  /act\\s*as\\s*(if|a)/i,\n  /disregard\\s*(all|your|previous)/i,\n  /override\\s*(your|the)?\\s*(instructions|rules)/i,\n  /new\\s*instructions?/i,\n  /jailbreak/i,\n  /bypass\\s*(the)?\\s*(rules|restrictions|filters)/i,\n  /do\\s*not\\s*follow/i,\n  /stop\\s*being\\s*(an)?\\s*ai/i,\n  /reveal\\s*(your)?\\s*(system|instructions)/i,\n  /\\[system\\]/i,\n  /\\{\\{.*\\}\\}/i\n];\n\nconst comment = $('Webhook').first().json.body.comment || '';\nconst employeeId = $('Webhook').first().json.body.employee_id || '';\n\nlet isJailbreak = false;\nlet detectedPattern = '';\n\nfor (const pattern of jailbreakPatterns) {\n  if (pattern.test(comment)) {\n    isJailbreak = true;\n    detectedPattern = pattern.toString();\n    break;\n  }\n}\n\n// Sanitize comment - remove potential jailbreak content\nlet sanitizedComment = comment;\nif (isJailbreak) {\n  sanitizedComment = '[FILTERED - Jailbreak attempt detected]';\n}\n\nreturn {\n  isJailbreak,\n  detectedPattern,\n  originalComment: comment,\n  sanitizedComment,\n  employeeId\n};"
+      },
+      "id": "a1b2c3d4-5555-5555-5555-555555555555",
+      "name": "Jailbreak Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-jailbreak",
+              "leftValue": "={{ $json.isJailbreak }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-6666-6666-6666-666666666666",
+      "name": "Is Jailbreak?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "jailbreak_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "employee_id",
+              "fieldValue": "={{ $json.employeeId }}"
+            },
+            {
+              "fieldName": "raw_comment",
+              "fieldValue": "={{ $json.originalComment }}"
+            },
+            {
+              "fieldName": "detected_instructions",
+              "fieldValue": "={{ $json.detectedPattern }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-7777-7777-7777-777777777777",
+      "name": "Log Jailbreak",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1250, 150]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.2
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Ти си AI асистент за анализ на касови бележки. Твоята задача е да извлечеш информация от снимка на касова бележка или от текстово описание и да определиш категорията на разхода.\n\nВърни САМО валиден JSON в следния формат:\n{\n  \"merchant\": \"Име на търговеца или null ако не се вижда\",\n  \"receipt_date\": \"YYYY-MM-DD формат или null\",\n  \"amount\": число (само числото, без валута),\n  \"currency\": \"BGN\" или \"EUR\" или \"USD\",\n  \"items\": [\"списък с артикули ако се виждат\"],\n  \"has_alcohol\": true/false,\n  \"has_cigarettes\": true/false,\n  \"category\": \"една от: Храна, Служебен обяд, Транспорт, Техника, Обучение, Командировка, Цигари, Други\",\n  \"is_business_meal\": true/false (дали изглежда като служебен обяд/вечеря - по-голяма сметка, ресторант)\n}\n\nКатегории:\n- \"Храна\" - малки покупки за храна, кафе, закуски (обикновено под 50лв)\n- \"Служебен обяд\" - ресторанти, по-големи сметки, бизнес обеди/вечери\n- \"Транспорт\" - такси, градски транспорт, гориво\n- \"Техника\" - компютри, телефони, аксесоари, периферия\n- \"Обучение\" - курсове, книги, конференции\n- \"Командировка\" - хотели, билети, пътувания\n- \"Цигари\" - тютюневи изделия\n- \"Други\" - всичко останало\n\nАко има коментар от потребителя, вземи го предвид за категоризацията.\nВРЪЩАЙ САМО JSON, без допълнителен текст!"
+            },
+            {
+              "role": "user",
+              "content": "=Анализирай този разход.\n\nКоментар от служителя: {{ $('Jailbreak Check').item.json.sanitizedComment }}\n\n{{ $('Webhook').first().json.body.receipt_file ? 'Снимка е прикачена - анализирай я.' : 'Няма снимка. Базирай се само на коментара за да определиш категория и приблизителна сума.' }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-8888-8888-8888-888888888888",
+      "name": "AI Vision Analysis",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response\nlet aiResponse;\ntry {\n  const responseText = $('AI Vision Analysis').first().json.message.content;\n  // Extract JSON from response\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    aiResponse = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found in response');\n  }\n} catch (e) {\n  // Default values if parsing fails\n  aiResponse = {\n    merchant: null,\n    receipt_date: null,\n    amount: 0,\n    currency: 'BGN',\n    items: [],\n    has_alcohol: false,\n    has_cigarettes: false,\n    category: 'Други',\n    is_business_meal: false\n  };\n}\n\nconst webhookData = $('Webhook').first().json.body;\nconst amount = aiResponse.amount || 0;\nconst category = aiResponse.category || 'Други';\nconst hasAlcohol = aiResponse.has_alcohol || false;\nconst hasCigarettes = aiResponse.has_cigarettes || false;\nconst isBusinessMeal = aiResponse.is_business_meal || false;\n\n// Apply company policies\nlet status = 'Manual Review';\nlet statusReason = 'Изисква ръчен преглед';\n\n// Policy 1: Food up to 50 BGN without alcohol\nif (category === 'Храна') {\n  if (hasAlcohol) {\n    status = 'Rejected';\n    statusReason = 'Не се допуска алкохол в разходи за храна';\n  } else if (amount <= 50) {\n    status = 'Approved';\n    statusReason = 'Автоматично одобрен - храна до 50лв без алкохол';\n  } else {\n    status = 'Manual Review';\n    statusReason = 'Разход за храна над 50лв - изисква ръчно одобрение';\n  }\n}\n\n// Policy 2: Business meals up to 400 BGN (alcohol allowed)\nelse if (category === 'Служебен обяд' || isBusinessMeal) {\n  if (amount <= 400) {\n    status = 'Approved';\n    statusReason = 'Автоматично одобрен - служебен обяд/вечеря до 400лв';\n  } else {\n    status = 'Manual Review';\n    statusReason = 'Служебен обяд над 400лв - изисква ръчно одобрение';\n  }\n}\n\n// Policy 3: Cigarettes - always rejected\nelse if (category === 'Цигари' || hasCigarettes) {\n  status = 'Rejected';\n  statusReason = 'Персонални разходи за цигари не се одобряват';\n}\n\n// Policy 4: Transport/taxi up to 30 BGN\nelse if (category === 'Транспорт') {\n  if (amount <= 30) {\n    status = 'Approved';\n    statusReason = 'Автоматично одобрен - транспорт до 30лв';\n  } else {\n    status = 'Rejected';\n    statusReason = 'Транспорт над 30лв - автоматично отказан';\n  }\n}\n\n// Policy 5: Business travel - manual review\nelse if (category === 'Командировка') {\n  status = 'Manual Review';\n  statusReason = 'Командировъчни разходи - изисква ръчно одобрение';\n}\n\n// Policy 6: Tech equipment up to 600 BGN\nelse if (category === 'Техника') {\n  if (amount <= 600) {\n    status = 'Approved';\n    statusReason = 'Автоматично одобрен - техника до 600лв';\n  } else {\n    status = 'Rejected';\n    statusReason = 'Техника над 600лв - автоматично отказан';\n  }\n}\n\n// Policy 7: Training - always approved if work-related\nelse if (category === 'Обучение') {\n  status = 'Approved';\n  statusReason = 'Автоматично одобрен - обучение свързано с работата';\n}\n\n// Policy 8: Everything else - manual review\nelse {\n  status = 'Manual Review';\n  statusReason = 'Категория \"Други\" - изисква ръчен преглед';\n}\n\nreturn {\n  employee_id: webhookData.employee_id,\n  full_name: webhookData.full_name,\n  receipt_image_url: webhookData.receipt_file ? 'uploaded' : null,\n  merchant: aiResponse.merchant,\n  receipt_date: aiResponse.receipt_date,\n  amount: amount,\n  currency: aiResponse.currency || 'BGN',\n  category: category,\n  status: status,\n  status_reason: statusReason,\n  comment: $('Jailbreak Check').item.json.sanitizedComment,\n  items: aiResponse.items\n};"
+      },
+      "id": "a1b2c3d4-9999-9999-9999-999999999999",
+      "name": "Policy Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": "expenses",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "employee_id",
+              "fieldValue": "={{ $json.employee_id }}"
+            },
+            {
+              "fieldName": "receipt_image_url",
+              "fieldValue": "={{ $json.receipt_image_url || 'no-image' }}"
+            },
+            {
+              "fieldName": "merchant",
+              "fieldValue": "={{ $json.merchant }}"
+            },
+            {
+              "fieldName": "receipt_date",
+              "fieldValue": "={{ $json.receipt_date || new Date().toISOString().split('T')[0] }}"
+            },
+            {
+              "fieldName": "amount",
+              "fieldValue": "={{ $json.amount || 0 }}"
+            },
+            {
+              "fieldName": "currency",
+              "fieldValue": "={{ $json.currency || 'BGN' }}"
+            },
+            {
+              "fieldName": "category",
+              "fieldValue": "={{ $json.category }}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldName": "status_reason",
+              "fieldValue": "={{ $json.status_reason }}"
+            },
+            {
+              "fieldName": "comment",
+              "fieldValue": "={{ $json.comment }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "name": "Save to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"{{ $('Policy Engine').item.json.status }}\",\n  \"reason\": \"{{ $('Policy Engine').item.json.status_reason }}\",\n  \"category\": \"{{ $('Policy Engine').item.json.category }}\",\n  \"amount\": {{ $('Policy Engine').item.json.amount }},\n  \"currency\": \"{{ $('Policy Engine').item.json.currency }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1b2c3d4-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Employee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Employee": {
+      "main": [
+        [
+          {
+            "node": "Employee Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Employee Valid?": {
+      "main": [
+        [
+          {
+            "node": "Jailbreak Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Employee Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jailbreak Check": {
+      "main": [
+        [
+          {
+            "node": "Is Jailbreak?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Jailbreak?": {
+      "main": [
+        [
+          {
+            "node": "Log Jailbreak",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Vision Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Jailbreak": {
+      "main": [
+        [
+          {
+            "node": "AI Vision Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Vision Analysis": {
+      "main": [
+        [
+          {
+            "node": "Policy Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Policy Engine": {
+      "main": [
+        [
+          {
+            "node": "Save to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
